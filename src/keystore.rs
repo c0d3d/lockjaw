@@ -1,5 +1,4 @@
 use crate::key::Key;
-use base64;
 use std::collections::HashMap;
 use std::convert::From;
 use std::fs::File;
@@ -27,8 +26,8 @@ impl From<io::Error> for LoadFailure {
     }
 }
 
-impl From<base64::DecodeError> for LoadFailure {
-    fn from(_: base64::DecodeError) -> LoadFailure {
+impl From<&'static str> for LoadFailure {
+    fn from(_: &'static str) -> LoadFailure {
         LoadFailure::KeyFileMalformed
     }
 }
@@ -38,13 +37,9 @@ impl Keystore {
         if let Some(p_str) = path.as_ref().to_str() {
             let mut secrets = HashMap::new();
             for line in read_lines(path)? {
-                if let Some(k) = Key::from_bytes(base64::decode(line?)?) {
-                    secrets.insert(k.get_name().clone(), k);
-                } else {
-                    return Err(LoadFailure::KeyFileMalformed);
-                }
+                let k = Key::from_line(&line?)?;
+                secrets.insert(k.get_name().clone(), k);
             }
-
             return Ok(Keystore {
                 loc: p_str.to_string(),
                 secrets,

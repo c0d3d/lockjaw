@@ -36,7 +36,8 @@ impl Keystore {
     pub fn load<T: AsRef<Path>>(path: &T) -> Result<Keystore, LoadFailure> {
         if let Some(p_str) = path.as_ref().to_str() {
             let mut secrets = HashMap::new();
-            for line in read_lines(path)? {
+            let file = File::open(path)?;
+            for line in io::BufReader::new(file).lines() {
                 let k = Key::from_line(&line?)?;
                 secrets.insert(k.get_name().clone(), k);
             }
@@ -48,14 +49,4 @@ impl Keystore {
             return Err(LoadFailure::KeyFileUnreadable);
         }
     }
-}
-
-// The output is wrapped in a Result to allow matching on errors
-// Returns an Iterator to the Reader of the lines of the file.
-fn read_lines<P>(filename: &P) -> io::Result<io::Lines<io::BufReader<File>>>
-where
-    P: AsRef<Path>,
-{
-    let file = File::open(filename)?;
-    Ok(io::BufReader::new(file).lines())
 }

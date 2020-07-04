@@ -49,4 +49,11 @@ impl Keystore {
             return Err(LoadFailure::KeyFileUnreadable);
         }
     }
+
+    pub fn find_key<T>(&self, name: T) -> Option<&Key>
+    where
+        T: AsRef<str>,
+    {
+        self.secrets.get(name.as_ref())
+    }
 }

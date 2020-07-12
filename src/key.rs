@@ -1,9 +1,11 @@
+use crate::memlock::MLock;
 use base64;
 
 type StrErr<T> = Result<T, &'static str>;
+type LockedBuff = MLock<[u8; 4096]>;
 
 #[derive(Clone)]
-enum KeyType {
+pub enum KeyType {
     OTC,
     PASSWORD,
 }
@@ -27,14 +29,20 @@ impl Into<String> for KeyType {
     }
 }
 
-pub struct Key {
+pub struct PlainKey {
     name: String,
     ktype: KeyType,
     enc_data: Vec<u8>,
 }
 
-impl Key {
-    pub fn from_line(line: &String) -> StrErr<Key> {
+pub struct Key {
+    name: String,
+    ktype: KeyType,
+    enc_data: LockedBuff,
+}
+
+impl PlainKey {
+    pub fn from_line(line: &String) -> StrErr<PlainKey> {
         return KeyStoreLine::parse(line)?.into();
     }
 
@@ -83,8 +91,8 @@ impl<'a> KeyStoreLine<&'a str> {
     }
 }
 
-impl From<&Key> for KeyStoreLine<String> {
-    fn from(k: &Key) -> KeyStoreLine<String> {
+impl From<&PlainKey> for KeyStoreLine<String> {
+    fn from(k: &PlainKey) -> KeyStoreLine<String> {
         return KeyStoreLine {
             name: k.name.clone(),
             ktype: k.ktype.clone().into(),
@@ -107,15 +115,15 @@ where
     }
 }
 
-impl<T> From<KeyStoreLine<T>> for StrErr<Key>
+impl<T> From<KeyStoreLine<T>> for StrErr<PlainKey>
 where
     T: AsRef<str>,
 {
-    fn from(ksl: KeyStoreLine<T>) -> StrErr<Key> {
+    fn from(ksl: KeyStoreLine<T>) -> StrErr<PlainKey> {
         let name = ksl.name.as_ref().to_string();
         let ktype = KeyType::from_string(ksl.ktype)?;
         let enc_data = base64::decode(ksl.enc_data.as_ref()).or(Err("Bad base64!"))?;
-        return Ok(Key {
+        return Ok(PlainKey {
             name,
             ktype,
             enc_data,

@@ -5,12 +5,13 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-struct Keystore {
+pub struct Keystore {
     loc: String,
     secrets: HashMap<String, Key>,
 }
 
-enum LoadFailure {
+#[derive(Debug)]
+pub enum LoadFailure {
     KeyFileNotFound,
     KeyFileMalformed,
     KeyFileUnreadable,

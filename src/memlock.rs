@@ -1,17 +1,18 @@
+use core::pin::Pin;
 use libc::__errno_location;
 use libc::{c_char, c_int, c_void, mlock, munlock, strerror_r};
 use std::ffi::CString;
 use std::mem::size_of;
-use std::ops::{Deref, DerefMut, Drop};
+use std::ops::{Deref, Drop};
 
-struct MLock<T>(Box<T>);
+pub struct MLock<T>(Pin<Box<T>>);
 
 impl<T> MLock<T>
 where
     T: Copy + Default,
 {
     pub fn new() -> Result<MLock<T>, String> {
-        let x: Box<T> = Box::new(Default::default());
+        let x: Pin<Box<T>> = Box::pin(Default::default());
         unsafe {
             if mlock((x.deref() as *const T) as *const c_void, size_of::<T>()) != 0 {
                 return Err(get_err(*__errno_location()));
@@ -19,6 +20,10 @@ where
         }
 
         return Ok(MLock(x));
+    }
+
+    pub fn deref_mut(&mut self) -> Pin<&mut T> {
+        return self.0.as_mut();
     }
 }
 
@@ -30,15 +35,11 @@ impl<T> Deref for MLock<T> {
     }
 }
 
-impl<T> DerefMut for MLock<T> {
-    fn deref_mut(&mut self) -> &mut T {
-        return &mut *self.0;
-    }
-}
-
 impl<T> Drop for MLock<T> {
     fn drop(&mut self) {
-        unsafe { munlock(self.0.deref() as *const T as *const c_void, size_of::<T>()) };
+        let ptr = self.0.deref() as *const T as *const c_void;
+        let size = size_of::<T>();
+        unsafe { munlock(ptr, size) };
     }
 }
 

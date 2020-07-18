@@ -27,6 +27,12 @@ where
     }
 }
 
+impl<T: AsRef<[u8]>> AsRef<[u8]> for MLock<T> {
+    fn as_ref(&self) -> &[u8] {
+        return (*self.0).as_ref();
+    }
+}
+
 impl<T> Deref for MLock<T> {
     type Target = T;
 

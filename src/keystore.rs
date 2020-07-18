@@ -10,7 +10,6 @@ pub struct Keystore {
     secrets: HashMap<String, Key>,
 }
 
-#[derive(Debug)]
 pub enum LoadFailure {
     KeyFileNotFound,
     KeyFileMalformed,
@@ -35,20 +34,21 @@ impl From<&'static str> for LoadFailure {
 
 impl Keystore {
     pub fn load<T: AsRef<Path>>(path: &T) -> Result<Keystore, LoadFailure> {
-        if let Some(p_str) = path.as_ref().to_str() {
-            let mut secrets = HashMap::new();
-            let file = File::open(path)?;
-            for line in io::BufReader::new(file).lines() {
-                let k = Key::from_line(&line?)?;
-                secrets.insert(k.get_name().clone(), k);
-            }
-            return Ok(Keystore {
-                loc: p_str.to_string(),
-                secrets,
-            });
-        } else {
-            return Err(LoadFailure::KeyFileUnreadable);
-        }
+        unimplemented!();
+        // if let Some(p_str) = path.as_ref().to_str() {
+        //     let mut secrets = HashMap::new();
+        //     let file = File::open(path)?;
+        //     for line in io::BufReader::new(file).lines() {
+        //         let k = Key::from_line(&line?)?;
+        //         secrets.insert(k.get_name().clone(), k);
+        //     }
+        //     return Ok(Keystore {
+        //         loc: p_str.to_string(),
+        //         secrets,
+        //     });
+        // } else {
+        //     return Err(LoadFailure::KeyFileUnreadable);
+        // }
     }
 
     pub fn find_key<T>(&self, name: T) -> Option<&Key>

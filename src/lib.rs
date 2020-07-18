@@ -1,8 +1,13 @@
 extern crate base64;
 extern crate libc;
+
+#[macro_use]
+extern crate serde;
+
 extern crate sodiumoxide;
 
 mod crypto;
+mod databuff;
 mod key;
 mod keystore;
 mod memlock;

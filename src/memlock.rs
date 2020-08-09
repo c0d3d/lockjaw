@@ -1,9 +1,12 @@
 use core::pin::Pin;
 use libc::__errno_location;
 use libc::{c_char, c_int, c_void, mlock, munlock, strerror_r};
+use serde::de::{self, Deserializer, Error, Visitor};
+use serde::ser::Serializer;
+use serde::{Deserialize, Serialize};
 use std::ffi::CString;
 use std::mem::size_of;
-use std::ops::{Deref, Drop};
+use std::ops::{Deref, DerefMut, Drop};
 
 pub struct MLock<T>(Pin<Box<T>>);
 
@@ -20,10 +23,6 @@ where
         }
 
         return Ok(MLock(x));
-    }
-
-    pub fn deref_mut(&mut self) -> Pin<&mut T> {
-        return self.0.as_mut();
     }
 }
 
@@ -46,6 +45,32 @@ impl<T> Drop for MLock<T> {
         let ptr = self.0.deref() as *const T as *const c_void;
         let size = size_of::<T>();
         unsafe { munlock(ptr, size) };
+    }
+}
+
+impl<T> Serialize for MLock<T>
+where
+    T: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        return self.0.as_ref().get_ref().serialize(serializer);
+    }
+}
+
+impl<'de, T> Deserialize<'de> for MLock<T>
+where
+    T: Deserialize<'de> + Copy + Default,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut locked: MLock<T> = MLock::new().map_err(|x| D::Error::custom(x))?;
+        locked.0.as_mut().set(T::deserialize(deserializer)?);
+        return Ok(locked);
     }
 }
 

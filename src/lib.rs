@@ -10,6 +10,7 @@ mod crypto;
 mod databuff;
 mod key;
 mod keystore;
+mod keystore2;
 mod memlock;
 mod ring;
 

@@ -39,7 +39,7 @@ pub struct Key {
     ktype: KeyType,
     nonce: secretbox::Nonce,
     tag: secretbox::Tag,
-    enc_data: LockedBuff<DataBuff>,
+    //    enc_data: LockedBuff<DataBuff>,
 }
 
 impl Key {

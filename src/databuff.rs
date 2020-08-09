@@ -2,6 +2,7 @@ use serde::de::{self, Deserializer, Visitor};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Copy)]
 pub struct DataBuff(pub [u8; 4096]);
 
 impl AsRef<[u8]> for DataBuff {
@@ -50,5 +51,11 @@ impl<'de> Deserialize<'de> for DataBuff {
         D: Deserializer<'de>,
     {
         return Ok(DataBuff(deserializer.deserialize_bytes(FourKVisitor)?));
+    }
+}
+
+impl Default for DataBuff {
+    fn default() -> DataBuff {
+        return DataBuff([0; 4096]);
     }
 }

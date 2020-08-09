@@ -1,12 +1,12 @@
 use core::pin::Pin;
 use libc::__errno_location;
 use libc::{c_char, c_int, c_void, mlock, munlock, strerror_r};
-use serde::de::{self, Deserializer, Error, Visitor};
+use serde::de::{Deserializer, Error};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 use std::ffi::CString;
 use std::mem::size_of;
-use std::ops::{Deref, DerefMut, Drop};
+use std::ops::{Deref, Drop};
 
 pub struct MLock<T>(Pin<Box<T>>);
 
@@ -23,6 +23,10 @@ where
         }
 
         return Ok(MLock(x));
+    }
+
+    pub fn set(&mut self, new_val: T) {
+        self.0.as_mut().set(new_val);
     }
 }
 

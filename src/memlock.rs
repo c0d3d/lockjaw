@@ -12,7 +12,7 @@ pub struct MLock<T>(Pin<Box<T>>);
 
 impl<T> MLock<T>
 where
-    T: Copy + Default,
+    T: Default,
 {
     pub fn new() -> Result<MLock<T>, String> {
         let x: Pin<Box<T>> = Box::pin(Default::default());

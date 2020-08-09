@@ -68,7 +68,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        let mut locked: MLock<T> = MLock::new().map_err(|x| D::Error::custom(x))?;
+        let mut locked: MLock<T> = MLock::new().map_err(D::Error::custom)?;
         locked.0.as_mut().set(T::deserialize(deserializer)?);
         return Ok(locked);
     }

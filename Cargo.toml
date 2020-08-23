@@ -12,6 +12,7 @@ keyutils = "0.2.1"
 libc = "0.2.72"
 ring = "0.16.15"
 sodiumoxide = "0.2.5"
+clap = "2.33.3"
 
 [lib]
 name = "lockjaw"

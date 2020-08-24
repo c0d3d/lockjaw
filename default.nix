@@ -5,7 +5,7 @@ in (pkgs.rustPlatform.buildRustPackage rec {
   version = "0.1.0";
   src = ./.;
   buildInputs = [ pkgs.keyutils ];
-  cargoSha256 = "sha256:1gj46681w6h3qksmjzryg17gds9lvvy71x77xz7i2gkzzqksjb5b";
+  cargoSha256 = "sha256:16d38s9wxlb2mxbnfvwm7kmwlpcgdq3pzkyxgwfk9vifpbirkh1m";
   verifyCargoDeps = true;
   meta = with pkgs.stdenv.lib; {
     description = "CLI Secret Manager with Linux Keyring Support";

@@ -1,9 +1,9 @@
-extern crate base64;
-extern crate libc;
-
 #[macro_use]
 extern crate serde;
 
+extern crate base64;
+extern crate libc;
+extern crate rmp_serde as rmps;
 extern crate sodiumoxide;
 
 mod crypto;
@@ -15,41 +15,37 @@ mod memlock;
 mod ring;
 
 pub use key::KeyType;
-// pub use keystore::LoadFailure;
 
-use std::path::Path;
-
-pub fn init() -> Result<(), ()> {
-    sodiumoxide::init()
+pub fn init() -> Result<LockJaw, LJError> {
+    sodiumoxide::init();
+    return LockJaw::new();
 }
 
 pub struct LockJaw {
-    //    store: keystore::Keystore,
+    store: keystore::KeyStore,
 }
 
-pub enum SecretErr<T> {
-    NotFound,
-    UserDefined(T),
+pub enum LJError {
+    LoadFail(String),
+    DefaultLocMissing,
+}
+
+impl From<keystore::KSLoadFail> for LJError {
+    fn from(e: keystore::KSLoadFail) -> LJError {
+        return LJError::LoadFail(format!("{:?}", e));
+    }
 }
 
 pub enum SecretType {}
 
-// impl LockJaw {
-//     pub fn new<T: AsRef<Path>>(file_path: &T) -> Result<LockJaw, keystore::LoadFailure> {
-//         return Ok(LockJaw {
-//             store: keystore::Keystore::load(file_path)?,
-//         });
-//     }
-
-//     pub fn with_secret<S, F, Good, Bad>(&self, name: S, to_run: F) -> Result<Good, SecretErr<Bad>>
-//     where
-//         F: Fn(key::KeyType, &[u8]) -> Result<Good, Bad>,
-//         S: AsRef<str>,
-//     {
-//         if let k = self.store.find_key(name) {
-//         } else {
-//             return Err(SecretErr::NotFound);
-//         }
-//         unimplemented!();
-//     }
-// }
+impl LockJaw {
+    fn new() -> Result<LockJaw, LJError> {
+        return if let Ok(s) = std::env::var("HOME") {
+            Ok(LockJaw {
+                store: keystore::KeyStore::new(format!("{}/.config/lockjaw.bin", s))?,
+            })
+        } else {
+            Err(LJError::DefaultLocMissing)
+        };
+    }
+}

@@ -16,9 +16,9 @@ mod ring;
 
 pub use key::KeyType;
 
-pub fn init() -> Result<LockJaw, LJError> {
-    sodiumoxide::init();
-    return LockJaw::new();
+pub fn init<T: AsRef<std::path::Path>>(p: Option<T>) -> Result<LockJaw, LJError> {
+    sodiumoxide::init().map_err(|()| LJError::SodiumOxideInitError)?;
+    return LockJaw::new(p);
 }
 
 pub struct LockJaw {
@@ -27,6 +27,7 @@ pub struct LockJaw {
 
 pub enum LJError {
     LoadFail(String),
+    SodiumOxideInitError,
     DefaultLocMissing,
 }
 
@@ -39,13 +40,18 @@ impl From<keystore::KSLoadFail> for LJError {
 pub enum SecretType {}
 
 impl LockJaw {
-    fn new() -> Result<LockJaw, LJError> {
-        return if let Ok(s) = std::env::var("HOME") {
-            Ok(LockJaw {
-                store: keystore::KeyStore::new(format!("{}/.config/lockjaw.bin", s))?,
-            })
+    fn new<T: AsRef<std::path::Path>>(path: Option<T>) -> Result<LockJaw, LJError> {
+        return Ok(if let Some(p) = path {
+            LockJaw {
+                store: keystore::KeyStore::new(p)?,
+            }
         } else {
-            Err(LJError::DefaultLocMissing)
-        };
+            LockJaw {
+                store: keystore::KeyStore::new(format!(
+                    "{}/.config/lockjaw.bin",
+                    std::env::var("HOME").expect("HOME env var missing?")
+                ))?,
+            }
+        });
     }
 }

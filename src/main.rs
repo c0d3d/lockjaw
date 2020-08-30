@@ -11,7 +11,7 @@ fn main() {
         .subcommand(SubCommand::with_name("list").about("lists available secrets"))
         .get_matches();
 
-    if let Err(_) = lockjaw::init() {
+    if let Err(_) = lockjaw::init::<&str>(None) {
         println!("Lockjaw init failed!");
         process::exit(1);
     }

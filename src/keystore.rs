@@ -1,14 +1,10 @@
+use crate::databuff::MAX_PAYLOAD_SIZE;
 use crate::key;
-
 use rmps::{decode, encode};
-use sodiumoxide::crypto::secretbox;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::{self, BufReader, Seek, SeekFrom, Write};
-use std::ops::Drop;
 use std::path::Path;
-use std::rc::Rc;
 
 #[derive(Serialize, Deserialize)]
 struct KeyStoreData(HashMap<String, key::RawKey>);
@@ -37,6 +33,11 @@ pub enum KSLoadFail {
     Format(String),
 }
 
+#[derive(Debug)]
+pub enum KSAddFail {
+    DataTooLarge(usize),
+}
+
 impl KeyStore {
     pub fn new<T: AsRef<Path>>(store_file: T) -> Result<KeyStore, KSLoadFail> {
         let file = OpenOptions::new()
@@ -58,10 +59,20 @@ impl KeyStore {
                 .or(Err(io::Error::new(io::ErrorKind::Other, "Encode failed!")))?,
         )
     }
-}
 
-impl Drop for KeyStore {
-    fn drop(&mut self) {
-        self.save_keystore().expect("Drop save failed!");
+    pub fn add_key_interactive<Name>(
+        &mut self,
+        ktype: key::KeyType,
+        name: &Name,
+        value: &[u8],
+    ) -> Option<KSAddFail>
+    where
+        Name: AsRef<str>,
+    {
+        if value.len() > MAX_PAYLOAD_SIZE {
+            return Some(KSAddFail::DataTooLarge(value.len()));
+        }
+
+        unimplemented!();
     }
 }

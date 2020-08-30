@@ -2,8 +2,24 @@ use serde::de::{self, Deserializer, Visitor};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 
+pub const MAX_PAYLOAD_SIZE: usize = 4096;
+
 #[derive(Clone, Copy)]
-pub struct DataBuff(pub [u8; 4096]);
+pub struct DataBuff(pub [u8; MAX_PAYLOAD_SIZE]);
+
+impl DataBuff {
+    pub fn from_slice(data: &[u8]) -> Option<DataBuff> {
+        let mut b = [0; MAX_PAYLOAD_SIZE];
+
+        if data.len() > MAX_PAYLOAD_SIZE {
+            return None;
+        }
+
+        b[..data.len()].copy_from_slice(data);
+
+        return Some(DataBuff(b));
+    }
+}
 
 impl AsRef<[u8]> for DataBuff {
     fn as_ref(&self) -> &[u8] {
@@ -23,7 +39,7 @@ impl Serialize for DataBuff {
 struct FourKVisitor;
 
 impl<'de> Visitor<'de> for FourKVisitor {
-    type Value = [u8; 4096];
+    type Value = [u8; MAX_PAYLOAD_SIZE];
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         formatter.write_str("4K Buffer")
@@ -33,12 +49,12 @@ impl<'de> Visitor<'de> for FourKVisitor {
     where
         E: de::Error,
     {
-        let mut buff = [0; 4096];
-        if v.len() < 4096 {
+        let mut buff = [0; MAX_PAYLOAD_SIZE];
+        if v.len() < MAX_PAYLOAD_SIZE {
             return Err(E::custom(format!("Buffer too short {}!", v.len())));
         }
         unsafe {
-            std::intrinsics::copy_nonoverlapping(v.as_ptr(), buff.as_mut_ptr(), 4096);
+            std::intrinsics::copy_nonoverlapping(v.as_ptr(), buff.as_mut_ptr(), MAX_PAYLOAD_SIZE);
         }
 
         return Ok(buff);
@@ -56,6 +72,6 @@ impl<'de> Deserialize<'de> for DataBuff {
 
 impl Default for DataBuff {
     fn default() -> DataBuff {
-        return DataBuff([0; 4096]);
+        return DataBuff([0; MAX_PAYLOAD_SIZE]);
     }
 }

@@ -1,4 +1,3 @@
-use core::pin::Pin;
 use libc::__errno_location;
 use libc::{c_char, c_int, c_void, mlock, munlock, strerror_r};
 use serde::de::{Deserializer, Error};
@@ -6,47 +5,32 @@ use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 use std::ffi::CString;
 use std::mem::size_of;
-use std::ops::{Deref, Drop};
+use std::ops::Drop;
 
-pub struct MLock<T>(Pin<Box<T>>);
+pub struct MLock<T>(T);
 
-impl<T> MLock<T>
-where
-    T: Default,
-{
-    pub fn new() -> Result<MLock<T>, String> {
-        let x: Pin<Box<T>> = Box::pin(Default::default());
+impl<T> MLock<T> {
+    pub fn new(v: T) -> Result<MLock<T>, String> {
         unsafe {
-            if mlock((x.deref() as *const T) as *const c_void, size_of::<T>()) != 0 {
+            if mlock((&v as *const T) as *const c_void, size_of::<T>()) != 0 {
                 return Err(get_err(*__errno_location()));
             }
         }
 
-        return Ok(MLock(x));
+        return Ok(MLock(v));
     }
 
-    pub fn set(&mut self, new_val: T) {
-        self.0.as_mut().set(new_val);
-    }
-}
-
-impl<T: AsRef<[u8]>> AsRef<[u8]> for MLock<T> {
-    fn as_ref(&self) -> &[u8] {
-        return (*self.0).as_ref();
-    }
-}
-
-impl<T> Deref for MLock<T> {
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        return &*self.0;
+    pub unsafe fn with_mut_ptr<F, X>(&mut self, f: F) -> X
+    where
+        F: Fn(&mut T) -> X,
+    {
+        return f(&mut self.0);
     }
 }
 
 impl<T> Drop for MLock<T> {
     fn drop(&mut self) {
-        let ptr = self.0.deref() as *const T as *const c_void;
+        let ptr = &self.0 as *const T as *const c_void;
         let size = size_of::<T>();
         unsafe { munlock(ptr, size) };
     }
@@ -60,7 +44,7 @@ where
     where
         S: Serializer,
     {
-        return self.0.as_ref().get_ref().serialize(serializer);
+        return self.0.serialize(serializer);
     }
 }
 
@@ -72,8 +56,8 @@ where
     where
         D: Deserializer<'de>,
     {
-        let mut locked: MLock<T> = MLock::new().map_err(D::Error::custom)?;
-        locked.0.as_mut().set(T::deserialize(deserializer)?);
+        let mut locked: MLock<T> =
+            MLock::new(T::deserialize(deserializer)?).map_err(D::Error::custom)?;
         return Ok(locked);
     }
 }

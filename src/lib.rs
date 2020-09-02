@@ -8,13 +8,11 @@ extern crate sodiumoxide;
 
 mod crypto;
 mod databuff;
-mod key;
 mod keystore;
-mod keystore2;
 mod memlock;
 mod ring;
 
-pub use key::KeyType;
+pub use keystore::KeyType;
 
 pub fn init<T: AsRef<std::path::Path>>(p: Option<T>) -> Result<LockJaw, LJError> {
     sodiumoxide::init().map_err(|()| LJError::SodiumOxideInitError)?;

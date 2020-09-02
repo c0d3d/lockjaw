@@ -1,6 +1,7 @@
 use serde::de::{self, Deserializer, Visitor};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
+use std::ops::{Deref, DerefMut};
 
 pub const MAX_PAYLOAD_SIZE: usize = 4096;
 
@@ -24,6 +25,20 @@ impl DataBuff {
 impl AsRef<[u8]> for DataBuff {
     fn as_ref(&self) -> &[u8] {
         return &self.0;
+    }
+}
+
+impl Deref for DataBuff {
+    type Target = [u8; MAX_PAYLOAD_SIZE];
+
+    fn deref(&self) -> &Self::Target {
+        return &self.0;
+    }
+}
+
+impl DerefMut for DataBuff {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        return &mut self.0;
     }
 }
 

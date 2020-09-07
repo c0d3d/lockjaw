@@ -1,3 +1,4 @@
+#![feature(core_intrinsics)]
 #[macro_use]
 extern crate serde;
 
@@ -11,6 +12,7 @@ mod databuff;
 mod keystore;
 mod memlock;
 mod ring;
+mod zero;
 
 pub use keystore::KeyType;
 

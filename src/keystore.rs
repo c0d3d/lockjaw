@@ -1,6 +1,7 @@
 use crate::databuff::DataBuff;
 use crate::databuff::MAX_PAYLOAD_SIZE;
-use crate::memlock::{self, MLock};
+use crate::memlock;
+use crate::zero::explicit_bzero;
 use rmps::{decode, encode};
 use serde;
 use serde::{Deserialize, Serialize};
@@ -9,11 +10,25 @@ use sodiumoxide::crypto::secretbox;
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::{self, BufReader, Seek, SeekFrom, Write};
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use std::path::Path;
 
 #[derive(Serialize, Deserialize)]
 struct KeyStoreData(HashMap<String, RawKey>);
+
+impl Deref for KeyStoreData {
+    type Target = HashMap<String, RawKey>;
+
+    fn deref(&self) -> &Self::Target {
+        return &self.0;
+    }
+}
+
+impl DerefMut for KeyStoreData {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        return &mut self.0;
+    }
+}
 
 pub struct KeyStore {
     file: File,
@@ -42,6 +57,7 @@ pub enum KSLoadFail {
 #[derive(Debug)]
 pub enum KSAddFail {
     DataTooLarge(usize),
+    InteractiveAddFailed(String),
 }
 
 impl KeyStore {
@@ -79,12 +95,15 @@ impl KeyStore {
             return Some(KSAddFail::DataTooLarge(value.len()));
         }
 
-        unimplemented!();
+        return match RawKey::create_interactive(ktype, value) {
+            Ok(k) => {
+                self.keys.insert(name.as_ref().to_string(), k);
+                None
+            }
+            Err(s) => Some(KSAddFail::InteractiveAddFailed(s)),
+        };
     }
 }
-
-type StrErr<T> = Result<T, &'static str>;
-type LockedBuff<T> = MLock<T>;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub enum KeyType {
@@ -102,19 +121,34 @@ pub struct RawKey {
 
 impl RawKey {
     fn create_interactive(ktype: KeyType, value: &[u8]) -> Result<RawKey, String> {
+        let mut key = secretbox::Key::from_slice(&sha256::hash(b"").0).unwrap();
+
+        let ans = RawKey::create_uninteractive(ktype, value, &key);
+
+        explicit_bzero(&mut key);
+
+        return ans;
+    }
+
+    fn create_uninteractive(
+        ktype: KeyType,
+        value: &[u8],
+        key: &secretbox::Key,
+    ) -> Result<RawKey, String> {
         let mut locked_buff = memlock::MLock::new(
             DataBuff::from_slice(value).ok_or("Couldnt consume data".to_string())?,
         )?;
 
         let nonce = secretbox::gen_nonce();
-        let key = secretbox::Key::from_slice(&sha256::hash(b"").0)
-            .ok_or("Sha256 produce != 32 bytes".to_string())?;
 
-        let tag = unsafe {
-            locked_buff
-                .with_mut_ptr(|data| secretbox::seal_detached(data.deref_mut(), &nonce, &key))
-        };
+        let tag = locked_buff
+            .with_mut_ptr(|data| secretbox::seal_detached(data.deref_mut(), &nonce, &key));
 
-        unimplemented!();
+        return Ok(RawKey {
+            ktype,
+            tag,
+            nonce,
+            enc_payload: locked_buff,
+        });
     }
 }

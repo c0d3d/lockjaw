@@ -20,7 +20,7 @@ impl<T> MLock<T> {
         return Ok(MLock(v));
     }
 
-    pub unsafe fn with_mut_ptr<F, X>(&mut self, f: F) -> X
+    pub fn with_mut_ptr<F, X>(&mut self, f: F) -> X
     where
         F: Fn(&mut T) -> X,
     {
